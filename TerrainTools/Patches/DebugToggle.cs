@@ -13,7 +13,7 @@ namespace TerrainTools.Patches
 		{
 			if (__instance == Player.m_localPlayer && (bool)TakeInput.Invoke(__instance, new object[0]) && Input.GetKeyDown(Settings.debugToggle.Value.MainKey))
 			{
-				Commands.DebugToggle();
+				Commands.DebugToggle(out _);
 			}
 		}
 	}

@@ -38,7 +38,7 @@ Distance of visible debug lights
 LightStrength: (default: 0.5)  
 Strength of debug lights
 
-Toggle: (keybind, default: F4)  
+Toggle: (default: F4)  
 Terrain debug toggle keybind
 
 ## Building  

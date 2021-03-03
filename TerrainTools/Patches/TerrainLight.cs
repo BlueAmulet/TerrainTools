@@ -7,7 +7,7 @@ namespace TerrainTools.Patches
 	{
 		public static void Prefix(ref TerrainModifier __instance)
 		{
-			if (Commands.debugTerrain)
+			if (Commands.debugTerrain && __instance.m_playerModifiction)
 			{
 				Commands.SetupLight(__instance);
 			}

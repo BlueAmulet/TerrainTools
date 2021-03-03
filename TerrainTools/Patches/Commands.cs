@@ -26,8 +26,7 @@ namespace TerrainTools.Patches
 
 		public static void Postfix(ref Console __instance)
 		{
-			string text = __instance.m_input.text;
-			string[] part = text.Split(' ');
+			string[] part = __instance.m_input.text.Trim().Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 			if (part.Length <= 0)
 			{
 				return;
@@ -55,19 +54,26 @@ namespace TerrainTools.Patches
 						return;
 					}
 				}
-				Vector3 playerPos = Player.m_localPlayer.transform.position;
-				TerrainModifier[] mods = Resources.FindObjectsOfTypeAll<TerrainModifier>().Where(x =>
-					x != null &&
-					x.m_playerModifiction &&
-					Vector3.Distance(playerPos, x.transform.position) <= radius
-				).ToArray();
-				int levelCount = mods.Where(x => x != null && x.m_level).Count();
-				int smoothCount = mods.Where(x => x != null && x.m_smooth).Count();
-				int paintCount = mods.Where(x => x != null && x.m_paintCleared && !x.m_level && !x.m_smooth).Count();
-				__instance.Print("Counted " + mods.Length + " terrain modifications");
-				__instance.Print(levelCount + " level modifications");
-				__instance.Print(smoothCount + " smooth modifications");
-				__instance.Print(paintCount + " paint modifications");
+				if (Player.m_localPlayer != null)
+				{
+					Vector3 playerPos = Player.m_localPlayer.transform.position;
+					TerrainModifier[] mods = TerrainModifier.GetAllInstances().Where(x =>
+						x != null &&
+						x.m_playerModifiction &&
+						Vector3.Distance(playerPos, x.transform.position) <= radius
+					).ToArray();
+					int levelCount = mods.Where(x => x != null && x.m_level).Count();
+					int smoothCount = mods.Where(x => x != null && x.m_smooth).Count();
+					int paintCount = mods.Where(x => x != null && x.m_paintCleared && !x.m_level && !x.m_smooth).Count();
+					__instance.Print("Counted " + mods.Length + " terrain modifications");
+					__instance.Print(levelCount + " level modifications");
+					__instance.Print(smoothCount + " smooth modifications");
+					__instance.Print(paintCount + " paint modifications");
+				}
+				else
+				{
+					__instance.Print("This command only works in game");
+				}
 			}
 			else if (part[0] == "resetterrain")
 			{
@@ -83,45 +89,58 @@ namespace TerrainTools.Patches
 				}
 				if (part.Length > 2)
 				{
-					if (!Enum.TryParse(part[2].ToLowerInvariant(), out type))
+					if (!Enum.TryParse(part[2].ToLowerInvariant(), out type) || int.TryParse(part[2], out _))
 					{
 						__instance.Print("Could not parse type: " + part[2]);
 						return;
 					}
 				}
-				Vector3 playerPos = Player.m_localPlayer.transform.position;
-				TerrainModifier[] mods = Resources.FindObjectsOfTypeAll<TerrainModifier>().Where(x =>
-					x != null &&
-					x.m_playerModifiction &&
-					Vector3.Distance(playerPos, x.transform.position) <= radius &&
-					(type != TerrainType.level || x.m_level) &&
-					(type != TerrainType.smooth || x.m_smooth) &&
-					(type != TerrainType.paint || (x.m_paintCleared && !x.m_level && !x.m_smooth))
-				).ToArray();
-				TerrainModifier[] mods2 = mods.Where(x => x != null && m_nview(x) != null && m_nview(x).IsValid() && m_nview(x).IsOwner()).ToArray();
-				foreach (TerrainModifier mod in mods2)
+				if (Player.m_localPlayer != null)
 				{
-					ZNetScene.instance.Destroy(mod.gameObject);
+					Vector3 playerPos = Player.m_localPlayer.transform.position;
+					TerrainModifier[] mods = TerrainModifier.GetAllInstances().Where(x =>
+						x != null &&
+						x.m_playerModifiction &&
+						Vector3.Distance(playerPos, x.transform.position) <= radius &&
+						(type != TerrainType.level || x.m_level) &&
+						(type != TerrainType.smooth || x.m_smooth) &&
+						(type != TerrainType.paint || (x.m_paintCleared && !x.m_level && !x.m_smooth))
+					).ToArray();
+					TerrainModifier[] mods2 = mods.Where(x => x != null && m_nview(x) != null && m_nview(x).IsValid() && m_nview(x).IsOwner()).ToArray();
+					foreach (TerrainModifier mod in mods2)
+					{
+						ZNetScene.instance.Destroy(mod.gameObject);
+					}
+					__instance.Print("Removed " + mods2.Length + " terrain modifications");
+					if (mods2.Length < mods.Length)
+					{
+						__instance.Print("Could not remove " + (mods.Length - mods2.Length) + " terrain mods due to ownership");
+					}
 				}
-				__instance.Print("Removed " + mods2.Length + " terrain modifications");
-				if (mods2.Length < mods.Length)
+				else
 				{
-					__instance.Print("Could not remove " + (mods.Length - mods2.Length) + " terrain mods due to ownership");
+					__instance.Print("This command only works in game");
 				}
 			}
 			else if (part[0] == "debugterrain")
 			{
-				int count = DebugToggle();
-				__instance.Print((debugTerrain ? "Enabled" : "Disabled") + " lights on " + count + " terrain modifications");
+				if (DebugToggle(out int count))
+				{
+					__instance.Print((debugTerrain ? "Enabled" : "Disabled") + " lights on " + count + " terrain modifications");
+				}
+				else
+				{
+					__instance.Print("This command only works in game");
+				}
 			}
 			else if (part[0] == "debugstrength")
 			{
 				if (part.Length > 1)
 				{
-					if (float.TryParse(part[1], out float intensity))
+					if (float.TryParse(part[1], out float strength))
 					{
-						Settings.lightStrength.Value = intensity;
-						__instance.Print("Light strength set to " + intensity);
+						Settings.lightStrength.Value = strength;
+						__instance.Print("Light strength set to " + strength);
 					}
 					else
 					{
@@ -154,19 +173,19 @@ namespace TerrainTools.Patches
 			}
 		}
 
-		internal static int DebugToggle()
+		internal static bool DebugToggle(out int count)
 		{
-			int count = 0;
+			count = 0;
 			if (EnvMan.instance != null)
 			{
 				debugTerrain = !debugTerrain;
-				foreach (TerrainModifier mod in Resources.FindObjectsOfTypeAll<TerrainModifier>().Where(x => x != null && x.m_playerModifiction))
+				foreach (TerrainModifier mod in TerrainModifier.GetAllInstances().Where(x => x != null && x.m_playerModifiction))
 				{
 					Light light = SetupLight(mod);
 					count++;
 				}
 				EnvMan.instance.m_dirLight.enabled = !debugTerrain;
-				foreach (Heightmap map in Resources.FindObjectsOfTypeAll<Heightmap>().Where(x => x != null))
+				foreach (Heightmap map in Heightmap.GetAllHeightmaps().Where(x => x != null))
 				{
 					Material mat = m_materialInstance(map);
 					if (mat != null)
@@ -181,8 +200,12 @@ namespace TerrainTools.Patches
 						}
 					}
 				}
+				return true;
 			}
-			return count;
+			else
+			{
+				return false;
+			}
 		}
 
 		internal static Light SetupLight(TerrainModifier mod)
