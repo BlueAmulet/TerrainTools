@@ -11,7 +11,7 @@ namespace TerrainTools
 	{
 		public const string GUID = "TerrainTools";
 		public const string PluginName = "TerrainTools";
-		public const string Version = "1.0.2";
+		public const string Version = "1.0.3";
 
 		internal static new ManualLogSource Logger;
 		internal static readonly Harmony harmony = new Harmony(GUID);
@@ -19,7 +19,7 @@ namespace TerrainTools
 		public void Awake()
 		{
 			Logger = base.Logger;
-			Settings.InitConfig();
+			Settings.InitConfig(Config);
 			harmony.PatchAll(Assembly.GetExecutingAssembly());
 			int patchedMethods = 0;
 			foreach (MethodBase method in harmony.GetPatchedMethods())

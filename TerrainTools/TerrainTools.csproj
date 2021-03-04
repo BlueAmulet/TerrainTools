@@ -41,6 +41,7 @@
     <Compile Include="Patches\EnvLight.cs" />
     <Compile Include="Patches\HandleLogout.cs" />
     <Compile Include="Patches\TerrainLight.cs" />
+    <Compile Include="RestoreData.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="TerrainTools.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -48,6 +49,10 @@
   <ItemGroup>
     <Reference Include="0Harmony">
       <HintPath>libs\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="assembly_utils">
+      <HintPath>libs\assembly_utils.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="assembly_valheim">

@@ -20,6 +20,9 @@ countterrain [radius=max]
 resetterrain [radius=5] [type]
 	Remove nearby terrain modifications
 	Valid types are: all, level, smooth, paint
+undoreset
+	Restore removed terrain modifications
+	Has up to 32 available restores, amount can be configured
 debugterrain
 	Enables a terrain modification visualization mode
 	This mode can be laggy depending on how many modifiers are nearby
@@ -29,6 +32,8 @@ debugstrength [new strength]
 debugdistance [new distance]
 	Distance of visible lights in visualization
 ```
+
+## Config
 
 TerrainTools also creates a config file at BepInEx\config\TerrainTools.cfg
 
@@ -40,6 +45,12 @@ Strength of debug lights
 
 Toggle: (default: F4)  
 Terrain debug toggle keybind
+
+ResetRadius: (default: 5)  
+Default reset radius if not specified
+
+RedoMax: (default: 32)  
+Maximum number of redos available
 
 ## Building  
 You will need [Visual Studio 2019](https://visualstudio.microsoft.com/vs/community/) and .NET Framework 4.7.2  

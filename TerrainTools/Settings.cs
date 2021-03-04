@@ -14,6 +14,9 @@ namespace TerrainTools
 		private static ConfigFile configFile;
 		private static Dictionary<Type, string> typeStr = new Dictionary<Type, string>();
 
+		internal static ConfigEntry<float> resetRadius;
+		internal static ConfigEntry<int> restoreMax;
+
 		internal static ConfigEntry<float> lightDistance;
 		internal static ConfigEntry<float> lightStrength;
 		internal static ConfigEntry<KeyboardShortcut> debugToggle;
@@ -26,14 +29,17 @@ namespace TerrainTools
 			typeStr.Add(typeof(KeyboardShortcut), "keybind");
 		}
 
-		public static void InitConfig()
+		public static void InitConfig(ConfigFile config)
 		{
 			var mOriginal = AccessTools.Method(typeof(ConfigEntryBase), "WriteDescription");
 			var mPrefix = AccessTools.Method(typeof(Settings), "MyWriteDescription");
 			TerrainTools.harmony.Patch(mOriginal, new HarmonyMethod(mPrefix));
 
-			configFile = new ConfigFile(Path.Combine(Paths.ConfigPath, TerrainTools.PluginName + ".cfg"), true);
+			configFile = config;
 			ConfigEntry<int> version = configFile.Bind("Tools", "Version", 1, "Configuration Version");
+
+			resetRadius = configFile.Bind("Tools", "ResetRadius", 5f, "Default reset radius if not specified");
+			restoreMax = configFile.Bind("Tools", "RestoreMax", 32, "Maximum number of restores available");
 
 			lightDistance = configFile.Bind("Debug", "LightDistance", 25f, "Distance of visible debug lights");
 			lightStrength = configFile.Bind("Debug", "LightStrength", 0.5f, "Strength of debug lights");

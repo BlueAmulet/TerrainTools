@@ -14,7 +14,9 @@ namespace TerrainTools.Patches
 	{
 		private static readonly AccessTools.FieldRef<TerrainModifier, ZNetView> m_nview = AccessTools.FieldRefAccess<TerrainModifier, ZNetView>("m_nview");
 		internal static readonly AccessTools.FieldRef<Heightmap, Material> m_materialInstance = AccessTools.FieldRefAccess<Heightmap, Material>("m_materialInstance");
+
 		internal static bool debugTerrain = false;
+		private static readonly List<RestoreData[]> restoreInfo = new List<RestoreData[]>();
 
 		private enum TerrainType
 		{
@@ -38,7 +40,8 @@ namespace TerrainTools.Patches
 			if (part[0] == "help")
 			{
 				__instance.Print("countterrain [radius=max] - count nearby terrain modifications");
-				__instance.Print("resetterrain [radius=5] [type] - remove nearby terrain modifications");
+				__instance.Print("resetterrain [radius=" + Settings.resetRadius.Value + "] [type] - remove nearby terrain modifications");
+				__instance.Print("undoreset - restore removed terrain modifications");
 				__instance.Print("debugterrain - visualize terrain modifications");
 				__instance.Print("debugstrength [new strength] - visualization strength");
 				__instance.Print("debugdistance [new distance] - visualization distance");
@@ -60,7 +63,7 @@ namespace TerrainTools.Patches
 					TerrainModifier[] mods = TerrainModifier.GetAllInstances().Where(x =>
 						x != null &&
 						x.m_playerModifiction &&
-						Vector3.Distance(playerPos, x.transform.position) <= radius
+						Utils.DistanceXZ(playerPos, x.transform.position) <= radius
 					).ToArray();
 					int levelCount = mods.Where(x => x != null && x.m_level).Count();
 					int smoothCount = mods.Where(x => x != null && x.m_smooth).Count();
@@ -77,7 +80,7 @@ namespace TerrainTools.Patches
 			}
 			else if (part[0] == "resetterrain")
 			{
-				float radius = 5f;
+				float radius = Settings.resetRadius.Value;
 				TerrainType type = TerrainType.all;
 				if (part.Length > 1)
 				{
@@ -101,15 +104,25 @@ namespace TerrainTools.Patches
 					TerrainModifier[] mods = TerrainModifier.GetAllInstances().Where(x =>
 						x != null &&
 						x.m_playerModifiction &&
-						Vector3.Distance(playerPos, x.transform.position) <= radius &&
+						Utils.DistanceXZ(playerPos, x.transform.position) <= radius &&
 						(type != TerrainType.level || x.m_level) &&
 						(type != TerrainType.smooth || x.m_smooth) &&
 						(type != TerrainType.paint || (x.m_paintCleared && !x.m_level && !x.m_smooth))
 					).ToArray();
 					TerrainModifier[] mods2 = mods.Where(x => x != null && m_nview(x) != null && m_nview(x).IsValid() && m_nview(x).IsOwner()).ToArray();
+					List<RestoreData> restoreData = new List<RestoreData>();
 					foreach (TerrainModifier mod in mods2)
 					{
+						restoreData.Add(new RestoreData(mod.transform.position, ZNetScene.instance.GetPrefab(ZNetView.GetPrefabName(mod.gameObject)), mod.GetCreationTime()));
 						ZNetScene.instance.Destroy(mod.gameObject);
+					}
+					if (restoreData.Count > 0 && Settings.restoreMax.Value > 0)
+					{
+						restoreInfo.Add(restoreData.ToArray());
+						while (restoreData.Count > Settings.restoreMax.Value)
+						{
+							restoreData.RemoveAt(0);
+						}
 					}
 					__instance.Print("Removed " + mods2.Length + " terrain modifications");
 					if (mods2.Length < mods.Length)
@@ -120,6 +133,27 @@ namespace TerrainTools.Patches
 				else
 				{
 					__instance.Print("This command only works in game");
+				}
+			}
+			else if (part[0] == "undoreset")
+			{
+				if (restoreInfo.Count > 0)
+				{
+					RestoreData[] restoreData = restoreInfo.Last();
+					restoreInfo.Remove(restoreData);
+					int restored = 0;
+					foreach (RestoreData data in restoreData)
+					{
+						GameObject instance = UnityEngine.Object.Instantiate(data.prefab, data.position, Quaternion.identity);
+						ZNetView view = instance.GetComponent<ZNetView>();
+						view.GetZDO().m_timeCreated = data.creationTime;
+						restored++;
+					}
+					__instance.Print("Restored " + restored + " terrain modifiers");
+				}
+				else
+				{
+					__instance.Print("No available restore data");
 				}
 			}
 			else if (part[0] == "debugterrain")
